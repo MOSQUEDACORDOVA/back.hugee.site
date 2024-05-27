@@ -14,11 +14,12 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
+    Route::post('/job-offers', [JobOffersController::class, 'store']);
     Route::put('/job-offers/{id}', [JobOffersController::class, 'update']);
     Route::delete('/job-offers/{id}', [JobOffersController::class, 'destroy']);
 
 });
 
 Route::get('/job-offers', [JobOffersController::class, 'index']);
-Route::post('/job-offers', [JobOffersController::class, 'store']);
+
 
