@@ -30,7 +30,7 @@ class JobOffersController extends Controller
             return response()->json(['error' => 'Error al obtener las ofertas de empleo'], 500);
         }
     }
-    
+
     /**
      * Almacena una nueva oferta de trabajo.
      *
@@ -39,16 +39,31 @@ class JobOffersController extends Controller
      */
     public function store(Request $request)
     {
+
+        // Definir regla de validación personalizada
+        Validator::extend('valid_whatsapp', function ($attribute, $value, $parameters, $validator) {
+            // Verificar si el número de WhatsApp tiene el formato correcto
+            return preg_match('/^\d{1,3}\d{6,15}$/', $value);
+            
+        });
+
         // Valida los datos de la solicitud
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'whatsapp' => 'nullable|string',
-            'mail' => 'nullable|string|email',
+            'whatsapp' => 'nullable|string|required_without:mail|valid_whatsapp',
+            'mail' => 'nullable|string|required_without:whatsapp|email',
+        ], [
+            'whatsapp.valid_whatsapp' => 'El campo WhatsApp debe ser un número válido con el código de área.'
         ]);
 
+        // Verifica si al menos uno de los campos 'whatsapp' o 'mail' está presente
+        if (!$request->has('whatsapp') && !$request->has('mail')) {
+            return response()->json(['error' => 'Debes proporcionar al menos un número de WhatsApp o una dirección de correo electrónico.'], 422);
+        }
+
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['error' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
         try {
@@ -66,22 +81,31 @@ class JobOffersController extends Controller
         } catch (\Exception $e) {
             // Loguea el error
             Log::error('Error al guardar la oferta de trabajo: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al guardar la oferta de trabajo'], 500);
+            return response()->json(['error' => 'Error al guardar la oferta de trabajo', 'message' => $e->getMessage()], 500);
         }
     }
 
     public function update(Request $request, $id)
     {
+        // Definir regla de validación personalizada
+        Validator::extend('valid_whatsapp', function ($attribute, $value, $parameters, $validator) {
+            // Verificar si el número de WhatsApp tiene el formato correcto
+            return preg_match('/^\d{1,3}\d{6,15}$/', $value);
+            
+        });
+
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
-            'whatsapp' => 'nullable|string',
+            'whatsapp' => 'nullable|string|valid_whatsapp',
             'mail' => 'nullable|string|email',
             'status' => 'sometimes|required|integer', // Agregar validación para el estado
+        ], [
+            'whatsapp.valid_whatsapp' => 'El campo WhatsApp debe ser un número válido con el código de área.'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['error' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
         try {
