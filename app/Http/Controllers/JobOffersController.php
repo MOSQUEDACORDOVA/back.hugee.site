@@ -16,20 +16,57 @@ class JobOffersController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            // Obtiene todas las ofertas de empleo
-            $jobOffers = JobOffers::all();
+            // Obtener los parámetros de paginación de la solicitud
+            $page = $request->query('page', 1); // Número de página, predeterminado es 1
+            $perPage = $request->query('perPage', 10); // Cantidad de elementos por página, predeterminado es 10
+    
+            // Calcular el índice de inicio para la consulta
+            $startIndex = ($page - 1) * $perPage;
+    
+            // Obtener las ofertas de empleo paginadas, ordenadas por fecha de creación de forma descendente
+            $jobOffers = JobOffers::offset($startIndex)->limit($perPage)->get();
 
-            // Retorna una respuesta con las ofertas de empleo
+    
+            // Retornar una respuesta con las ofertas de empleo paginadas
             return response()->json(['data' => $jobOffers], 200);
         } catch (\Exception $e) {
-            // Loguea el error
+            // Loguear el error
             Log::error('Error al obtener las ofertas de empleo: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener las ofertas de empleo'], 500);
         }
     }
+
+    public function search(Request $request)
+    {
+        try {
+            // Validar si se proporcionó un término de búsqueda
+            $query = $request->input('query');
+    
+            
+    
+            // Realizar la búsqueda en la base de datos
+            $results = JobOffers::where('title', 'like', "%$query%")
+                                 ->orWhere('description', 'like', "%$query%")
+                                 ->get();
+    
+            // Verificar si se encontraron resultados
+            if ($results->isEmpty()) {
+                return response()->json(['message' => 'No se encontraron ofertas de empleo para la búsqueda proporcionada.'], 404);
+            }
+    
+            // Retornar los resultados de la búsqueda
+            return response()->json(['data' => $results], 200);
+        } catch (\Exception $e) {
+            // Loguear el error
+            Log::error('Error al buscar ofertas de empleo: ' . $e->getMessage());
+            return response()->json(['error' => 'Error desconocido al buscar ofertas de empleo'], 500);
+        }
+    }
+    
+
 
     /**
      * Almacena una nueva oferta de trabajo.
